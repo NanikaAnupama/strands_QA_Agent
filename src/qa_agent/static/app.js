@@ -30,10 +30,17 @@ async function refreshHealth() {
     const r = await fetch("/api/health");
     const j = await r.json();
     $("#be-url").textContent = location.origin;
-    $("#mcp-url").textContent = j.mcp_url || "(unset)";
-    if (j.mcp_reachable) {
+    // Two backends answer this: the local Starlette server (which reports MCP
+    // reachability) and the AWS Lambda API (which runs the pipeline directly
+    // and has no MCP server to reach).
+    if (j.mode === "pipeline" && !("mcp_reachable" in j)) {
+      $("#mcp-url").textContent = `lambda • ${j.model || "model unset"}`;
+      setStatus("ok", "pipeline ready");
+    } else if (j.mcp_reachable) {
+      $("#mcp-url").textContent = j.mcp_url || "(unset)";
       setStatus("ok", `MCP reachable (${j.mcp_status})`);
     } else {
+      $("#mcp-url").textContent = j.mcp_url || "(unset)";
       setStatus("bad", `MCP unreachable: ${j.mcp_status}`);
     }
   } catch (err) {
@@ -190,6 +197,93 @@ function renderReport(payload) {
   show(reportEl);
 }
 
+function pickedFile(id) {
+  const input = document.querySelector(`#${id}`);
+  return input && input.files && input.files.length ? input.files[0] : null;
+}
+
+async function readJson(r) {
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { return { _raw: text }; }
+}
+
+function failure(r, json) {
+  return new Error(
+    (json && (json.detail || json.error || json._raw)) ||
+    `${r.status} ${r.statusText}`
+  );
+}
+
+/** Local Starlette backend: one blocking multipart POST that returns the report. */
+async function runDirect() {
+  const fd = new FormData(form);
+  for (const name of ["template_document", "spec_document"]) {
+    if (!pickedFile(name)) fd.delete(name);
+  }
+  const r = await fetch("/api/qa", { method: "POST", body: fd });
+  const json = await readJson(r);
+  if (!r.ok) throw failure(r, json);
+  return json;
+}
+
+/**
+ * AWS backend: uploads go straight to S3 on presigned URLs, the run happens in
+ * a worker Lambda, and we poll for the outcome. Nothing large crosses the API
+ * function, so a report full of screenshots is no problem.
+ */
+async function runOnAws(presigned) {
+  const files = {
+    template: pickedFile("template_document"),
+    spec: pickedFile("spec_document"),
+  };
+
+  for (const [slot, target] of Object.entries(presigned.uploads || {})) {
+    const file = files[slot];
+    if (!file) continue;
+    const put = await fetch(target.url, {
+      method: "PUT",
+      headers: { "content-type": target.content_type },
+      body: file,
+    });
+    if (!put.ok) throw new Error(`upload of the ${slot} document failed (${put.status})`);
+  }
+
+  const start = await fetch("/api/qa", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      job_id: presigned.job_id,
+      url: form.querySelector("#url").value.trim(),
+      reference_url: (form.querySelector("#reference_url") || {}).value?.trim() || "",
+      template_text: (form.querySelector("#template_text") || {}).value?.trim() || "",
+      template_key: presigned.uploads?.template?.key || "",
+      spec_key: presigned.uploads?.spec?.key || "",
+    }),
+  });
+  const started = await readJson(start);
+  if (!start.ok) throw failure(start, started);
+
+  // The run takes minutes; poll gently so a long job costs a handful of requests.
+  const deadline = Date.now() + 16 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise((res) => setTimeout(res, 5000));
+    const r = await fetch(`/api/jobs/${started.job_id}`);
+    const job = await readJson(r);
+    if (!r.ok) throw failure(r, job);
+    if (job.status === "error") throw new Error(job.error || "the QA run failed");
+    if (job.status === "done") {
+      const report = await (await fetch(job.report_url)).json();
+      return {
+        report,
+        json_url: job.json_url,
+        pdf_url: job.pdf_url,
+        pdf_error: job.pdf_error,
+      };
+    }
+  }
+  throw new Error("timed out waiting for the QA run to finish");
+}
+
 async function submitForm(ev) {
   ev.preventDefault();
   hide(errorEl);
@@ -198,25 +292,29 @@ async function submitForm(ev) {
   runBtn.disabled = true;
   startTimer();
 
-  const fd = new FormData(form);
-  // Drop any file entry with no file actually selected (else the server tries
-  // to parse an empty upload).
-  for (const name of ["template_document", "spec_document"]) {
-    const input = document.querySelector(`#${name}`);
-    if (!input || !input.files || input.files.length === 0) {
-      fd.delete(name);
-    }
-  }
-
   try {
-    const r = await fetch("/api/qa", { method: "POST", body: fd });
-    const text = await r.text();
-    let json;
-    try { json = JSON.parse(text); } catch { json = null; }
-    if (!r.ok) {
-      throw new Error((json && (json.detail || json.error)) || `${r.status} ${r.statusText}\n${text}`);
+    // /api/uploads exists only on the AWS deployment. Its absence is how we
+    // detect the local server, so one build of this file serves both.
+    const probe = await fetch("/api/uploads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        template_filename: pickedFile("template_document")?.name || "",
+        template_size: pickedFile("template_document")?.size || 0,
+        spec_filename: pickedFile("spec_document")?.name || "",
+        spec_size: pickedFile("spec_document")?.size || 0,
+      }),
+    });
+
+    let payload;
+    if (probe.ok) {
+      payload = await runOnAws(await readJson(probe));
+    } else if (probe.status === 404 || probe.status === 405) {
+      payload = await runDirect();
+    } else {
+      throw failure(probe, await readJson(probe));
     }
-    renderReport(json);
+    renderReport(payload);
   } catch (err) {
     errorBody.textContent = err && err.message ? err.message : String(err);
     show(errorEl);

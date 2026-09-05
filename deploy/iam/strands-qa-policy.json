@@ -1,0 +1,194 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ProjectBuckets",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::strands-qa-*",
+        "arn:aws:s3:::strands-qa-*/*"
+      ]
+    },
+    {
+      "Sid": "BucketDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ContainerImageRegistry",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:DescribeRepositories",
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:PutLifecyclePolicy",
+        "ecr:GetLifecyclePolicy",
+        "ecr:DescribeImages",
+        "ecr:ListImages",
+        "ecr:BatchDeleteImage",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage",
+        "ecr:SetRepositoryPolicy",
+        "ecr:GetRepositoryPolicy",
+        "ecr:TagResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ServerlessCompute",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:*",
+        "cloudfront:*",
+        "codebuild:*",
+        "logs:*",
+        "cloudwatch:*",
+        "apigateway:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ProjectSecretsInParameterStore",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:PutParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath",
+        "ssm:DeleteParameter",
+        "ssm:AddTagsToResource"
+      ],
+      "Resource": "arn:aws:ssm:*:174976254754:parameter/strands-qa/*"
+    },
+    {
+      "Sid": "DescribeParametersNeedsStar",
+      "Effect": "Allow",
+      "Action": "ssm:DescribeParameters",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ProjectScopedRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:TagRole",
+        "iam:PutRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:PassRole",
+        "iam:UpdateAssumeRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::174976254754:role/strands-qa-*",
+        "arn:aws:iam::174976254754:role/aws-service-role/*"
+      ]
+    },
+    {
+      "Sid": "ServiceLinkedRoles",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CostGuardrailsAndDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:*",
+        "ce:*",
+        "pricing:*",
+        "freetier:*",
+        "sts:GetCallerIdentity",
+        "iam:Get*",
+        "iam:List*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyExpensiveCompute",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:RunInstances",
+        "rds:*",
+        "elasticache:*",
+        "eks:*",
+        "ecs:*",
+        "sagemaker:*",
+        "redshift:*",
+        "emr:*",
+        "opensearch:*",
+        "es:*",
+        "lightsail:*",
+        "ec2:CreateNatGateway",
+        "elasticloadbalancing:Create*",
+        "lambda:PutProvisionedConcurrencyConfig"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyTouchingOtherProjects",
+      "Effect": "Deny",
+      "Action": "*",
+      "Resource": [
+        "arn:aws:iam::174976254754:user/course-tracker-deploy",
+        "arn:aws:iam::174976254754:user/Yenushka",
+        "arn:aws:iam::174976254754:user/Nandika_Admin",
+        "arn:aws:iam::174976254754:user/learnsmart-admin",
+        "arn:aws:iam::174976254754:user/learnsmart-ses-staging",
+        "arn:aws:s3:::course-tracker-*",
+        "arn:aws:s3:::course-tracker-*/*",
+        "arn:aws:s3:::learnsmart-*",
+        "arn:aws:s3:::learnsmart-*/*"
+      ]
+    },
+    {
+      "Sid": "DenyTouchingOtherProjectsLambdas",
+      "Effect": "Deny",
+      "Action": [
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:DeleteFunction",
+        "lambda:AddPermission",
+        "lambda:RemovePermission",
+        "lambda:CreateFunctionUrlConfig",
+        "lambda:UpdateFunctionUrlConfig",
+        "lambda:DeleteFunctionUrlConfig"
+      ],
+      "NotResource": "arn:aws:lambda:*:174976254754:function:strands-qa-*"
+    },
+    {
+      "Sid": "DenyIamSelfEscalation",
+      "Effect": "Deny",
+      "Action": [
+        "iam:CreateUser",
+        "iam:DeleteUser",
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:PutUserPolicy",
+        "iam:AttachUserPolicy",
+        "iam:CreatePolicy",
+        "iam:CreatePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:CreateLoginProfile",
+        "iam:UpdateLoginProfile"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid":"Logs","Effect":"Allow",
+     "Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+     "Resource":"arn:aws:logs:eu-west-2:174976254754:log-group:/aws/codebuild/strands-qa-*"},
+    {"Sid":"PullSourceZip","Effect":"Allow",
+     "Action":["s3:GetObject","s3:GetObjectVersion"],
+     "Resource":"arn:aws:s3:::strands-qa-data-174976254754/*"},
+    {"Sid":"EcrAuth","Effect":"Allow","Action":"ecr:GetAuthorizationToken","Resource":"*"},
+    {"Sid":"EcrPush","Effect":"Allow",
+     "Action":["ecr:BatchCheckLayerAvailability","ecr:BatchGetImage",
+               "ecr:GetDownloadUrlForLayer","ecr:InitiateLayerUpload",
+               "ecr:UploadLayerPart","ecr:CompleteLayerUpload","ecr:PutImage",
+               "ecr:DescribeImages"],
+     "Resource":"arn:aws:ecr:eu-west-2:174976254754:repository/strands-qa-agent"}
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -58,8 +59,15 @@ USER_AGENT = (
 )
 
 
+# Extra Chromium flags, space-separated. Left empty locally; the Lambda image
+# sets --no-sandbox (Chromium's own sandbox cannot nest inside Lambda's) and
+# --disable-dev-shm-usage (Lambda gives /dev/shm only 64 MB, which Chromium
+# will otherwise exhaust and crash on a large page).
+_LAUNCH_ARGS = [a for a in os.environ.get("QA_CHROMIUM_ARGS", "").split() if a]
+
+
 def _new_browser_page(p):
-    browser = p.chromium.launch()
+    browser = p.chromium.launch(args=_LAUNCH_ARGS) if _LAUNCH_ARGS else p.chromium.launch()
     ctx = browser.new_context(
         viewport=VIEWPORT,
         ignore_https_errors=False,

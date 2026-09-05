@@ -1,0 +1,21 @@
+{
+  "region": "eu-west-2",
+  "account": "174976254754",
+  "iam_user": "strands-qa-user",
+  "iam_policy": "strands-qa-policy",
+  "site_bucket": "strands-qa-site-174976254754",
+  "data_bucket": "strands-qa-data-174976254754",
+  "ecr_repository": "strands-qa-agent",
+  "codebuild_project": "strands-qa-image-build",
+  "lambda_api": "strands-qa-api",
+  "lambda_worker": "strands-qa-worker",
+  "lambda_role": "strands-qa-lambda-role",
+  "codebuild_role": "strands-qa-codebuild-role",
+  "distribution_id": "E3C9JL0QZ0ZZ3T",
+  "url": "https://d1tv2to6hs04dz.cloudfront.net",
+  "ssm_prefix": "/strands-qa",
+  "budget": "strands-qa-monthly",
+  "http_api_id": "ae2gy9ebb6",
+  "http_api_name": "strands-qa-http",
+  "http_api_endpoint": "https://ae2gy9ebb6.execute-api.eu-west-2.amazonaws.com"
+}

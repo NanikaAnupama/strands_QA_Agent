@@ -13,3 +13,4 @@ screenshots/
 *.egg-info/
 build/
 dist/
+deploy/.source.zip

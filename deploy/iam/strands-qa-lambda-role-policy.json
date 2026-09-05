@@ -1,0 +1,24 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid":"Logs","Effect":"Allow",
+     "Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+     "Resource":"arn:aws:logs:eu-west-2:174976254754:*"},
+    {"Sid":"DataBucket","Effect":"Allow",
+     "Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:HeadObject"],
+     "Resource":"arn:aws:s3:::strands-qa-data-174976254754/*"},
+    {"Sid":"DataBucketList","Effect":"Allow",
+     "Action":["s3:ListBucket","s3:GetBucketLocation"],
+     "Resource":"arn:aws:s3:::strands-qa-data-174976254754"},
+    {"Sid":"ReadOwnSecrets","Effect":"Allow",
+     "Action":["ssm:GetParameter","ssm:GetParameters","ssm:GetParametersByPath"],
+     "Resource":"arn:aws:ssm:eu-west-2:174976254754:parameter/strands-qa/*"},
+    {"Sid":"DecryptSecureString","Effect":"Allow",
+     "Action":"kms:Decrypt",
+     "Resource":"*",
+     "Condition":{"StringEquals":{"kms:ViaService":"ssm.eu-west-2.amazonaws.com"}}},
+    {"Sid":"StartTheWorker","Effect":"Allow",
+     "Action":"lambda:InvokeFunction",
+     "Resource":"arn:aws:lambda:eu-west-2:174976254754:function:strands-qa-worker"}
+  ]
+}
